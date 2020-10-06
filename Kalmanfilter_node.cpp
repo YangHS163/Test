@@ -32,12 +32,16 @@ void chatterCallback(const Pose& msg)
    Matrix3f P;
    Matrix3f Q; //sensed noise
    //There is noise in every dimension, and the white noise is not correlated to each other
-   P << 1e-6, 0, 0,
-       0, 1e-6, 0,
-       0, 0, 1e-6;
-   Q << 2, 0, 0,
-       0, 2, 0,
-       0, 0, 2;
+   //Q is the process noise, the smaller, the system is easier to converge, and we trust the system more.
+   Q << 1e-9, 0, 0,
+       0, 1e-9, 0,
+       0, 0, 1e-9;
+   //R is the measurement noise, If R is too large, the Kalman filter response will be slower, 
+   //because it has less confidence in the newly measured value; the smaller the value, the faster the system will converge, 
+   //but if it is too small, it is prone to oscillation.
+   R << 1e-9, 0, 0,
+       0, 1e-9, 0,
+       0, 0, 1e-9;
    //ROS_INFO("x: [%f]", msg.position.x);
    //ROS_INFO("y: [%f]", msg.position.y);
    //ROS_INFO("z: [%f]", msg.position.z);
@@ -46,8 +50,8 @@ void chatterCallback(const Pose& msg)
    measure(1) = msg.position.y;
    measure(2) = msg.position.z;
    Vector3f state_predicted = A * state_filtered.back();
-   Matrix3f covariance_predicted = A * covariance_filtered.back() * A.transpose() + P;
-   Matrix3f temp = B * covariance_predicted * B.transpose() + Q;
+   Matrix3f covariance_predicted = A * covariance_filtered.back() * A.transpose() + Q;
+   Matrix3f temp = B * covariance_predicted * B.transpose() + R;
    Matrix3f KalmanGain = covariance_predicted * B * temp.inverse();
    state_filtered.push_back(state_predicted + KalmanGain * (measure - B * state_predicted));
    Matrix3f I = Matrix3f::Identity();
